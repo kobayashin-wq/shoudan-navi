@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARRCH 商談タスクナビ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#B8963E;--gold-light:#D4AF5A;--gold-dark:#8A6E2A;
+  --bg:#F7F5F2;--bg2:#FFFFFF;--bg3:#F0EDE8;--bg4:#E8E4DE;
+  --text:#1A1A1A;--text2:#444444;--text3:#888888;
+  --border:#E0DAD2;--sidebar-w:240px;
+}
+body{font-family:'Hiragino Kaku Gothic Pro','メイリオ',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+
+/* ===== TOPBAR ===== */
+.topbar{
+  height:56px;background:var(--bg2);border-bottom:1px solid var(--gold-dark);
+  display:flex;align-items:center;padding:0 16px;gap:12px;position:fixed;top:0;left:0;right:0;z-index:200;
+}
+.hamburger{
+  display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;border:none;background:none;
+}
+.hamburger span{width:22px;height:2px;background:var(--gold);display:block;border-radius:2px;transition:all .25s}
+.logo{color:var(--gold);font-size:17px;font-weight:700;letter-spacing:.05em;white-space:nowrap}
+.logo span{color:var(--text2);font-size:12px;font-weight:400;margin-left:6px}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.btn-sync{
+  background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:#111;
+  border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;
+  white-space:nowrap;transition:opacity .2s;
+}
+.btn-sync:hover{opacity:.85}
+.btn-sync:disabled{opacity:.5;cursor:default}
+.sync-status{font-size:11px;color:var(--text3);white-space:nowrap}
+
+/* ===== LAYOUT ===== */
+.layout{display:flex;margin-top:56px;min-height:calc(100vh - 56px)}
+
+/* ===== SIDEBAR ===== */
+.sidebar{
+  width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;position:fixed;top:56px;bottom:0;left:0;z-index:100;
+  transition:transform .25s ease;overflow:hidden;
+}
+.sidebar-overlay{
+  display:none;position:fixed;inset:0;top:56px;background:rgba(0,0,0,.55);z-index:99;
+}
+.sidebar-search-wrap{padding:12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sidebar-search{
+  width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);padding:7px 10px;font-size:13px;outline:none;
+}
+.sidebar-search:focus{border-color:var(--gold-dark)}
+.sidebar-tree{flex:1;overflow-y:auto;padding:8px 0}
+.sidebar-tree::-webkit-scrollbar{width:4px}
+.sidebar-tree::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* tree items */
+.adv-folder{border-bottom:1px solid var(--border)}
+.adv-header{
+  display:flex;align-items:center;padding:10px 12px;cursor:pointer;gap:8px;
+  color:var(--text2);font-size:13px;font-weight:600;transition:background .15s;user-select:none;
+}
+.adv-header:hover{background:var(--bg3)}
+.adv-arrow{font-size:10px;color:var(--text3);transition:transform .2s;margin-left:auto}
+.adv-arrow.open{transform:rotate(90deg)}
+.adv-count{
+  background:var(--gold-dark);color:#fff;font-size:10px;border-radius:10px;
+  padding:1px 6px;margin-left:4px;flex-shrink:0;
+}
+.adv-icon{font-size:15px;flex-shrink:0}
+.customer-list{display:none;padding-left:0}
+.customer-list.open{display:block}
+.customer-item{
+  display:block;padding:8px 12px 8px 36px;cursor:pointer;font-size:12px;
+  color:var(--text3);border-left:2px solid transparent;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.customer-item:hover{background:var(--bg3);color:var(--text2)}
+.customer-item.active{color:var(--gold);border-left-color:var(--gold);background:rgba(184,150,62,.08)}
+
+.sidebar-footer{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0}
+.btn-add-customer{
+  width:100%;background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:#111;
+  border:none;border-radius:6px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .2s;
+}
+.btn-add-customer:hover{opacity:.85}
+
+/* ===== MAIN ===== */
+.main{
+  margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-width:0;
+}
+
+/* welcome screen */
+.welcome{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:40px 24px;gap:16px;
+}
+.welcome-icon{font-size:48px;opacity:.3}
+.welcome h2{color:var(--gold);font-size:20px}
+.welcome p{color:var(--text3);font-size:14px;line-height:1.7;max-width:340px}
+
+/* customer detail */
+.customer-detail{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.detail-header{
+  background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 20px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;
+}
+.detail-name{font-size:18px;font-weight:700;color:var(--gold)}
+.detail-meta{font-size:12px;color:var(--text3);display:flex;gap:10px;flex-wrap:wrap}
+.detail-meta span{display:flex;align-items:center;gap:4px}
+.header-actions{margin-left:auto;display:flex;gap:8px;flex-shrink:0}
+.btn-edit{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;transition:border-color .15s;
+}
+.btn-edit:hover{border-color:var(--gold-dark)}
+.btn-delete{
+  background:var(--bg3);border:1px solid #553;color:#aa9;
+  border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;transition:all .15s;
+}
+.btn-delete:hover{border-color:#a55;color:#f88}
+
+/* phase tabs */
+.phase-tabs-wrap{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  overflow-x:auto;flex-shrink:0;
+}
+.phase-tabs-wrap::-webkit-scrollbar{height:3px}
+.phase-tabs-wrap::-webkit-scrollbar-thumb{background:var(--border)}
+.phase-tabs{display:flex;padding:0 12px;min-width:max-content}
+.phase-tab{
+  padding:11px 14px;font-size:12px;font-weight:600;color:var(--text3);
+  border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:all .15s;
+  user-select:none;
+}
+.phase-tab:hover{color:var(--text2)}
+.phase-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.phase-tab .tab-done{
+  display:inline-block;margin-left:5px;font-size:10px;color:#5a9;
+  background:rgba(80,160,100,.15);border-radius:10px;padding:1px 5px;
+}
+
+/* variant tabs */
+.variant-bar{
+  background:var(--bg3);border-bottom:1px solid var(--border);
+  padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;
+}
+.variant-btn{
+  background:var(--bg4);border:1px solid var(--border);color:var(--text3);
+  border-radius:16px;padding:5px 14px;font-size:12px;cursor:pointer;transition:all .15s;
+}
+.variant-btn:hover{border-color:var(--gold-dark);color:var(--text2)}
+.variant-btn.active{background:var(--gold-dark);border-color:var(--gold);color:#fff}
+
+/* phase10 section tabs */
+.section-bar{
+  background:var(--bg3);border-bottom:1px solid var(--border);
+  padding:8px 16px;display:flex;gap:8px;flex-shrink:0;
+}
+.section-btn{
+  background:var(--bg4);border:1px solid var(--border);color:var(--text3);
+  border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;transition:all .15s;
+}
+.section-btn.active{background:var(--gold-dark);border-color:var(--gold);color:#fff}
+
+/* task content */
+.task-content{flex:1;overflow-y:auto;padding:20px}
+.task-content::-webkit-scrollbar{width:5px}
+.task-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px}
+
+/* task list */
+.task-table-header{
+  display:grid;grid-template-columns:44px 1fr 90px 90px;
+  padding:8px 12px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px 8px 0 0;font-size:11px;color:var(--text3);font-weight:600;
+}
+.task-list{border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;overflow:hidden}
+.task-row{
+  display:grid;grid-template-columns:44px 1fr 90px 90px;
+  padding:11px 12px;border-bottom:1px solid var(--border);transition:background .12s;align-items:start;
+}
+.task-row:last-child{border-bottom:none}
+.task-row:hover{background:rgba(184,150,62,.04)}
+.task-row.done{opacity:.55}
+.task-check{display:flex;align-items:center;justify-content:center;padding-top:2px}
+.task-check input[type=checkbox]{
+  width:17px;height:17px;cursor:pointer;accent-color:var(--gold);
+}
+.task-text{font-size:13px;line-height:1.5;color:var(--text);padding-right:8px}
+.task-row.done .task-text{text-decoration:line-through;color:var(--text3)}
+.task-tool{display:flex;align-items:center}
+.tool-badge{
+  font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px;white-space:nowrap;
+}
+.tZOHO{background:#ddeeff;color:#1a5aaa}
+.tLINE{background:#d9f5d9;color:#1a7a1a}
+.tLINEW{background:#d9f5e8;color:#1a7a44}
+.tSP{background:#eaf5d9;color:#4a7a1a}
+.tCHAT{background:#fef0d9;color:#a06010}
+.tBOX{background:#d9eeff;color:#1a5a9a}
+.tRAKU{background:#f5d9f5;color:#8a1a8a}
+.tDOC{background:#fef5d9;color:#9a7010}
+.tASANA{background:#ffd9d9;color:#aa1a1a}
+.tPDF{background:#ffe5e5;color:#cc3333}
+.task-note{display:flex;align-items:center;font-size:11px}
+.note-btn{
+  background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;
+  transition:color .15s;
+}
+.note-btn:hover{color:var(--gold)}
+.note-btn.has-note{color:var(--gold-light)}
+.task-progress{margin-top:20px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px}
+.progress-label{font-size:12px;color:var(--text3);margin-bottom:8px;display:flex;justify-content:space-between}
+.progress-bar{background:var(--bg4);border-radius:6px;height:8px;overflow:hidden}
+.progress-fill{background:linear-gradient(90deg,var(--gold-dark),var(--gold));height:100%;border-radius:6px;transition:width .3s}
+
+/* ===== MODAL ===== */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;
+  align-items:center;justify-content:center;padding:16px;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--bg2);border:1px solid var(--gold-dark);border-radius:12px;
+  width:100%;max-width:480px;padding:24px;max-height:90vh;overflow-y:auto;
+}
+.modal h2{color:var(--gold);font-size:16px;margin-bottom:16px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{
+  width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);padding:9px 11px;font-size:13px;outline:none;font-family:inherit;
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--gold-dark)}
+.form-group textarea{resize:vertical;min-height:70px}
+.form-group select option{background:var(--bg3)}
+.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+.btn-primary{
+  background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:#111;
+  border:none;border-radius:7px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;
+}
+.btn-secondary{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  border-radius:7px;padding:9px 20px;font-size:13px;cursor:pointer;
+}
+
+/* note modal */
+.note-modal{max-width:380px}
+.note-modal textarea{min-height:100px}
+
+/* sheet url modal */
+.sheet-modal{max-width:440px}
+.sheet-url-info{font-size:12px;color:var(--text3);background:var(--bg3);border-radius:6px;padding:10px;margin-bottom:14px;line-height:1.6}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:767px){
+  .sidebar{
+    transform:translateX(calc(-1 * var(--sidebar-w)));
+    z-index:100;top:56px;
+  }
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.3)}
+  .sidebar-overlay.open{display:block}
+  .hamburger{display:flex}
+  .main{margin-left:0}
+  .task-table-header{grid-template-columns:40px 1fr 80px}
+  .task-table-header span:last-child{display:none}
+  .task-row{grid-template-columns:40px 1fr 80px}
+  .task-row>div:last-child{display:none}
+  .detail-header{padding:12px 14px}
+  .detail-name{font-size:15px}
+  .task-content{padding:12px}
+  .task-table-header,.task-row{font-size:12px;padding:9px 10px}
+  .modal{padding:18px 14px}
+  .topbar{padding:0 12px}
+  .logo span{display:none}
+  .phase-tab{padding:10px 11px;font-size:11px}
+}
+@media(max-width:400px){
+  .task-table-header{grid-template-columns:36px 1fr}
+  .task-table-header span:nth-child(3){display:none}
+  .task-row{grid-template-columns:36px 1fr}
+  .task-row>div:nth-child(3){display:none}
+}
+
+/* ===== DASHBOARD ===== */
+.btn-dash{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:all .15s;
+}
+.btn-dash.active,.btn-dash:hover{background:var(--gold-dark);border-color:var(--gold);color:#fff}
+.dashboard{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.dashboard::-webkit-scrollbar{width:5px}
+.dashboard::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px}
+.dash-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px}
+
+/* summary cards */
+.dash-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.dash-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:16px 18px;display:flex;flex-direction:column;gap:8px;
+}
+.dash-card-label{font-size:11px;color:var(--text3);font-weight:600;display:flex;align-items:center;gap:6px}
+.dash-card-value{font-size:28px;font-weight:700;color:var(--text)}
+.dash-card-sub{font-size:11px;color:var(--text3)}
+.dash-card.warn .dash-card-value{color:#e05a2b}
+.dash-card.good .dash-card-value{color:#2b9e5a}
+
+/* charts */
+.dash-charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.dash-chart-box{
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;
+}
+.dash-chart-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:16px}
+.bar-chart{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:flex;align-items:center;gap:10px;font-size:12px}
+.bar-label{width:90px;color:var(--text2);text-align:right;font-size:11px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;background:var(--bg4);border-radius:4px;height:18px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold-dark),var(--gold));transition:width .4s}
+.bar-fill.warn{background:linear-gradient(90deg,#c04020,#e06030)}
+.bar-pct{width:38px;font-size:11px;color:var(--text3);text-align:right;flex-shrink:0}
+.phase-bar-row{display:flex;align-items:center;gap:8px;font-size:11px}
+.phase-bar-label{width:100px;color:var(--text2);font-size:11px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.phase-bar-track{flex:1;background:var(--bg4);border-radius:4px;height:18px;overflow:hidden}
+.phase-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold-dark),var(--gold))}
+.phase-bar-count{width:30px;font-size:11px;color:var(--text3);text-align:right;flex-shrink:0}
+
+/* dash table */
+.dash-table-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.dash-filter-bar{display:flex;gap:6px;padding:14px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.dash-filter-btn{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text3);
+  border-radius:14px;padding:4px 12px;font-size:11px;cursor:pointer;transition:all .15s;
+}
+.dash-filter-btn.active{background:var(--gold-dark);border-color:var(--gold);color:#fff}
+.dash-table{width:100%;border-collapse:collapse}
+.dash-table th{
+  padding:10px 14px;font-size:11px;color:var(--text3);font-weight:600;
+  background:var(--bg3);border-bottom:1px solid var(--border);text-align:left;
+}
+.dash-table td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+.dash-table tr:last-child td{border-bottom:none}
+.dash-table tr:hover td{background:rgba(184,150,62,.04);cursor:pointer}
+.dash-phase-badge{
+  font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;
+  background:rgba(184,150,62,.15);color:var(--gold-dark);white-space:nowrap;
+}
+.dash-progress-wrap{display:flex;align-items:center;gap:8px}
+.dash-progress-track{flex:1;background:var(--bg4);border-radius:4px;height:8px;overflow:hidden;min-width:80px}
+.dash-progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold-dark),var(--gold))}
+.dash-progress-fill.warn{background:linear-gradient(90deg,#c04020,#e06030)}
+.dash-pct{font-size:11px;color:var(--text3);width:36px;text-align:right;flex-shrink:0}
+.status-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap}
+.status-ok{background:#d9f5e8;color:#1a7a44}
+.status-warn{background:#ffe5d9;color:#c04020}
+.status-new{background:#ddeeff;color:#1a5aaa}
+.dash-detail-btn{
+  font-size:11px;color:var(--gold-dark);background:none;border:none;cursor:pointer;
+  padding:4px 8px;border-radius:4px;transition:background .15s;
+}
+.dash-detail-btn:hover{background:rgba(184,150,62,.1)}
+@media(max-width:767px){
+  .dash-cards{grid-template-columns:repeat(2,1fr)}
+  .dash-charts{grid-template-columns:1fr}
+  .dashboard{padding:14px}
+  .dash-table th:nth-child(3),.dash-table td:nth-child(3){display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="メニュー">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="logo">ARRCH<span>商談タスクナビ</span></div>
+  <div class="topbar-actions">
+    <button class="btn-dash" id="btnDash">📋 ダッシュボード</button>
+    <span class="sync-status" id="syncStatus"></span>
+    <button class="btn-sync" id="btnSync">📊 シート同期</button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-search-wrap">
+      <input class="sidebar-search" type="text" id="treeSearch" placeholder="🔍 顧客名・ADV検索…">
+    </div>
+    <div class="sidebar-tree" id="sidebarTree"></div>
+    <div class="sidebar-footer">
+      <button class="btn-add-customer" id="btnAddCustomer">＋ 顧客を追加</button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main" id="mainArea">
+    <div class="welcome" id="welcomeScreen">
+      <div class="welcome-icon">🏠</div>
+      <h2>顧客を選択してください</h2>
+      <p>左のサイドバーからアドバイザーフォルダを開き、顧客を選択するとタスクが表示されます。</p>
+      <p style="color:var(--text3);font-size:12px;margin-top:8px">「シート同期」ボタンでGoogleスプレッドシートから顧客を自動取り込みできます。</p>
+    </div>
+    <div class="customer-detail" id="customerDetail" style="display:none"></div>
+    <div class="dashboard" id="dashboardScreen" style="display:none"></div>
+  </main>
+</div>
+
+<!-- ADD/EDIT CUSTOMER MODAL -->
+<div class="modal-overlay" id="customerModal">
+  <div class="modal">
+    <h2 id="customerModalTitle">顧客を追加</h2>
+    <div class="form-group">
+      <label>顧客名 *</label>
+      <input type="text" id="fName" placeholder="例: 田中 太郎">
+    </div>
+    <div class="form-group">
+      <label>担当ADV *</label>
+      <input type="text" id="fAdvisor" placeholder="例: 大峰 佑月">
+    </div>
+    <div class="form-group">
+      <label>初回接客担当</label>
+      <input type="text" id="fContact" placeholder="例: 橋本 浩平">
+    </div>
+    <div class="form-group">
+      <label>初接触日</label>
+      <input type="date" id="fDate">
+    </div>
+    <div class="form-group">
+      <label>フェーズ</label>
+      <select id="fPhase"></select>
+    </div>
+    <div class="form-group">
+      <label>メモ</label>
+      <textarea id="fMemo" placeholder="備考など"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelCustomer">キャンセル</button>
+      <button class="btn-primary" id="saveCustomer">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTE MODAL -->
+<div class="modal-overlay" id="noteModal">
+  <div class="modal note-modal">
+    <h2>タスクメモ</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:10px" id="noteTaskText"></p>
+    <div class="form-group">
+      <textarea id="noteInput" placeholder="メモを入力…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelNote">閉じる</button>
+      <button class="btn-primary" id="saveNote">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET URL MODAL -->
+<div class="modal-overlay" id="sheetModal">
+  <div class="modal sheet-modal">
+    <h2>📊 Googleスプレッドシート連携</h2>
+    <div class="sheet-url-info">
+      GASのWebアプリURLを入力してください。<br>
+      ・スプレッドシート → 拡張機能 → Apps Script<br>
+      ・デプロイ → ウェブアプリとしてデプロイ<br>
+      ・アクセス権限：「全員」に設定
+    </div>
+    <div class="form-group">
+      <label>GAS ウェブアプリURL</label>
+      <input type="url" id="fSheetUrl" placeholder="https://script.google.com/macros/s/…/exec">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelSheet">キャンセル</button>
+      <button class="btn-primary" id="confirmSheet">同期する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// DATA
+// =====================================================
+var PHASES = [
+  {id:1,name:'商談事前準備'},{id:2,name:'初回接客後'},{id:3,name:'おうちカフェ後'},
+  {id:4,name:'ライフプラン後'},{id:5,name:'ヒアリングブック後'},{id:6,name:'資金計画/CL後'},
+  {id:7,name:'パートナー申込後'},{id:8,name:'事前審査提出'},{id:9,name:'土地買付後'},{id:10,name:'四者引継ぎ会'},
+];
+
+var VARIANTS = {
+  2:[{id:'2a',label:'次アポあり'},{id:'2b',label:'いきなりカフェ'},{id:'2c',label:'次アポなし'}],
+  3:[{id:'3a',label:'次アポあり'},{id:'3b',label:'次アポなし'}],
+  6:[{id:'6a',label:'P取得なし'}],
+  10:[{id:'10a',label:'通常契約'},{id:'10b',label:'先行契約'}],
+};
+
+var TOOL_CLASS_MAP = {
+  'ZOHO':'tZOHO','LINE':'tLINE','LINEワークス':'tLINEW','スプシ':'tSP',
+  'チャット':'tCHAT','BOX':'tBOX','ラクモ':'tRAKU','ドキュメント':'tDOC',
+  'ASANA':'tASANA','PDF':'tPDF',
+};
+
+var TASKS = {
+  1:{default:[
+    {id:'t1-1',text:'間取り集を準備する',tool:''},
+    {id:'t1-2',text:'過去の施工写真のフォトブックを準備する（3冊以上）',tool:''},
+    {id:'t1-3',text:'模型を準備する',tool:''},
+    {id:'t1-4',text:'インスタ冊子を準備する',tool:''},
+    {id:'t1-5',text:'無料相談シートを準備する',tool:''},
+    {id:'t1-6',text:'FPヒアリングシートを準備する',tool:''},
+    {id:'t1-7',text:'FPヒアリングブックを準備する',tool:''},
+    {id:'t1-8',text:'新たな議事録を作成する',tool:'ドキュメント'},
+    {id:'t1-9',text:'お客様用のファイルとアーチバックを準備する',tool:''},
+  ]},
+  2:{
+    '2a':[
+      {id:'t2a-1',text:'ZOHOの【反響】にてお客様名を修正した（スペースなし・ご主人様名に変更）',tool:'ZOHO'},
+      {id:'t2a-2',text:'ZOHOの「A)反響ステータス」を「来場あり」に変更した',tool:'ZOHO'},
+      {id:'t2a-3',text:'ZOHOの【商談】にて「商談名」を修正した（スペースなしのお客様名のみ）',tool:'ZOHO'},
+      {id:'t2a-4',text:'ZOHOの「ステージ」を「初回面談」に変更した',tool:'ZOHO'},
+      {id:'t2a-5',text:'ZOHOの「営業担当者」を入力した',tool:'ZOHO'},
+      {id:'t2a-6',text:'ZOHOの「実施日)初回面談」を入力した',tool:'ZOHO'},
+      {id:'t2a-7',text:'ZOHOの「初回来場のきっかけとなった販促」を入力した',tool:'ZOHO'},
+      {id:'t2a-8',text:'ZOHOの「来場目的」を入力した',tool:'ZOHO'},
+      {id:'t2a-9',text:'ZOHOの「来場動機」を入力した',tool:'ZOHO'},
+      {id:'t2a-10',text:'ZOHOの「初回面談担当者」を入力した',tool:'ZOHO'},
+      {id:'t2a-11',text:'ZOHOの「初回次アポ有無」を入力した',tool:'ZOHO'},
+      {id:'t2a-12',text:'ZOHOの「未完了の活動」から次回の日程を登録した',tool:'ZOHO'},
+      {id:'t2a-13',text:'ZOHOの【商談】のメモ欄に「面談メモ」を張り付けた',tool:'ZOHO'},
+      {id:'t2a-14',text:'ドキュメントで面談メモを作成した',tool:'ドキュメント'},
+      {id:'t2a-15',text:'面談メモに「おうちカフェ申込書」の写メを張り付けた',tool:'ドキュメント'},
+      {id:'t2a-16',text:'ラクモにて登録した予定を修正入力した（設備紐づけ/"㋐新規顧客打合せ"に変更）',tool:'ラクモ'},
+      {id:'t2a-17',text:'LINEのお客様を変更した',tool:'LINE'},
+      {id:'t2a-18',text:'お客様にサンクスメール送信した',tool:'LINE'},
+      {id:'t2a-19',text:'営業管理スプレッドシートから「【新】2023次アポ表」を開く',tool:'スプシ'},
+      {id:'t2a-20',text:'次アポ表の「日付」「顧客名」「アドバイザー名」「初回接客担当者」を入力する',tool:'スプシ'},
+      {id:'t2a-21',text:'アーチに初めて来場した方の場合「新規来場」の欄を○と入力する',tool:'スプシ'},
+      {id:'t2a-22',text:'初回接客が「モデル見学or完成見学会」の場合○と入力する',tool:'スプシ'},
+      {id:'t2a-23',text:'「紹介」「イベント名」「動画」「カフェ取得」を入力する',tool:'スプシ'},
+      {id:'t2a-24',text:'カフェ以外のアポも取得した場合「カフェ以外」の欄に入力する',tool:'スプシ'},
+      {id:'t2a-25',text:'「カフェ予定日」「土地」「土地エリア」を入力する',tool:'スプシ'},
+      {id:'t2a-26',text:'紹介来場の場合、【紹介報告チャット】にて「来場者」と「紹介者」の報告を行う',tool:'チャット'},
+      {id:'t2a-27',text:'紹介カード報告を【♪紹介カードCP/紹介依頼数管理】チャットにて行う',tool:'チャット'},
+      {id:'t2a-28',text:'モデルハウスの足りない備品（飲み物・掃除用具）を確認し、美香さんに発注依頼を行う',tool:'チャット'},
+      {id:'t2a-29',text:'「間取り図10枚」「青ペン3本」「スケッチブック3冊」「カタログ10冊」の確認・不備は小林さんに報告',tool:'チャット'},
+    ],
+    '2b':[
+      {id:'t2b-1',text:'ZOHOの【反響】にてお客様名を修正した（スペースなし・ご主人様名に変更）',tool:'ZOHO'},
+      {id:'t2b-2',text:'ZOHOの「A)反響ステータス」を「来場あり」に変更した',tool:'ZOHO'},
+      {id:'t2b-3',text:'ZOHOの【商談】にて「商談名」を修正した（スペースなしのお客様名のみ）',tool:'ZOHO'},
+      {id:'t2b-4',text:'ZOHOの「ステージ」を「初回面談」に変更した',tool:'ZOHO'},
+      {id:'t2b-5',text:'ZOHOの「営業担当者」を入力した',tool:'ZOHO'},
+      {id:'t2b-6',text:'ZOHOの「実施日)初回面談」を入力した',tool:'ZOHO'},
+      {id:'t2b-7',text:'ZOHOの「初回来場のきっかけとなった販促」を入力した',tool:'ZOHO'},
+      {id:'t2b-8',text:'ZOHOの「来場目的」を入力した',tool:'ZOHO'},
+      {id:'t2b-9',text:'ZOHOの「来場動機」を入力した',tool:'ZOHO'},
+      {id:'t2b-10',text:'ZOHOの「初回面談担当者」を入力した',tool:'ZOHO'},
+      {id:'t2b-11',text:'ZOHOの「初回次アポ有無」を入力した',tool:'ZOHO'},
+      {id:'t2b-12',text:'ZOHOの「未完了の活動」から次回の日程を登録した',tool:'ZOHO'},
+      {id:'t2b-13',text:'ZOHOの【商談】のメモ欄に「面談メモ」を張り付けた',tool:'ZOHO'},
+      {id:'t2b-14',text:'ZOHOの「実施日）第二面談」を入力した',tool:'ZOHO'},
+      {id:'t2b-15',text:'ドキュメントで面談メモを作成した',tool:'ドキュメント'},
+      {id:'t2b-16',text:'面談メモに「おうちカフェ申込書」の写メを張り付けた',tool:'ドキュメント'},
+      {id:'t2b-17',text:'ラクモにて登録した予定を修正入力した（設備紐づけ/"㋐既存顧客打合せ"に変更）',tool:'ラクモ'},
+      {id:'t2b-18',text:'LINEのお客様を変更した',tool:'LINE'},
+      {id:'t2b-19',text:'お客様にサンクスメール送信した',tool:'LINE'},
+      {id:'t2b-20',text:'営業管理スプレッドシートから「【新】2023次アポ表」を開く',tool:'スプシ'},
+      {id:'t2b-21',text:'次アポ表の「日付」「顧客名」「アドバイザー名」「初回接客担当者」を入力する',tool:'スプシ'},
+      {id:'t2b-22',text:'新規来場○・第一面談×・イベント名はおうちカフェと入力する',tool:'スプシ'},
+      {id:'t2b-23',text:'「紹介」「イベント名」「動画」「カフェ取得」を入力する',tool:'スプシ'},
+      {id:'t2b-24',text:'カフェ以外のアポも取得した場合「カフェ以外」の欄に入力する',tool:'スプシ'},
+      {id:'t2b-25',text:'「カフェ予定日」を入力し、「カフェ実施」に○を入力する',tool:'スプシ'},
+      {id:'t2b-26',text:'「土地」「土地エリア」を入力する',tool:'スプシ'},
+      {id:'t2b-27',text:'紹介来場の場合、【紹介報告チャット】にて「来場者」と「紹介者」の報告を行う',tool:'チャット'},
+      {id:'t2b-28',text:'紹介カード報告を【♪紹介カードCP/紹介依頼数管理】チャットにて行う',tool:'チャット'},
+      {id:'t2b-29',text:'FP(鈴木さん)に次回の日程を送った',tool:'チャット'},
+      {id:'t2b-30',text:'BOXの顧客フォルダにフォルダを新規作成した',tool:'BOX'},
+      {id:'t2b-31',text:'無料相談申込書をBOXの顧客フォルダの「資金」に格納した',tool:'BOX'},
+    ],
+    '2c':[
+      {id:'t2c-1',text:'ZOHOの【反響】にてお客様名を修正した（スペースなし・ご主人様名に変更）',tool:'ZOHO'},
+      {id:'t2c-2',text:'ZOHOの「A)反響ステータス」を「来場あり」に変更した',tool:'ZOHO'},
+      {id:'t2c-3',text:'ZOHOの【商談】にて「商談名」を修正した（スペースなしのお客様名のみ）',tool:'ZOHO'},
+      {id:'t2c-4',text:'ZOHOの「ステージ」を「初回面談」に変更した',tool:'ZOHO'},
+      {id:'t2c-5',text:'ZOHOの「営業担当者」を入力した',tool:'ZOHO'},
+      {id:'t2c-6',text:'ZOHOの「実施日)初回面談」を入力した',tool:'ZOHO'},
+      {id:'t2c-7',text:'ZOHOの「初回来場のきっかけとなった販促」を入力した',tool:'ZOHO'},
+      {id:'t2c-8',text:'ZOHOの「来場目的」を入力した',tool:'ZOHO'},
+      {id:'t2c-9',text:'ZOHOの「来場動機」を入力した',tool:'ZOHO'},
+      {id:'t2c-10',text:'ZOHOの「初回面談担当者」を入力した',tool:'ZOHO'},
+      {id:'t2c-11',text:'ZOHOの「初回次アポ有無」を入力した',tool:'ZOHO'},
+      {id:'t2c-12',text:'ZOHOの【商談】のメモ欄に「面談メモ」を張り付けた',tool:'ZOHO'},
+      {id:'t2c-13',text:'ドキュメントで面談メモを作成した',tool:'ドキュメント'},
+      {id:'t2c-14',text:'LINEのお客様を変更した',tool:'LINE'},
+      {id:'t2c-15',text:'お客様にサンクスメール送信した',tool:'LINE'},
+      {id:'t2c-16',text:'営業管理スプレッドシートから「【新】2023次アポ表」を開く',tool:'スプシ'},
+      {id:'t2c-17',text:'次アポ表の「日付」「顧客名」「アドバイザー名」「初回接客担当者」を入力する',tool:'スプシ'},
+      {id:'t2c-18',text:'アーチに初めて来場した方の場合「新規来場」の欄を○と入力する',tool:'スプシ'},
+      {id:'t2c-19',text:'初回接客が「モデル見学or完成見学会」の場合○と入力する',tool:'スプシ'},
+      {id:'t2c-20',text:'「紹介」「イベント名」「動画」「カフェ取得」を入力する',tool:'スプシ'},
+      {id:'t2c-21',text:'カフェ以外のアポを取得した場合「カフェ以外」の欄に入力する',tool:'スプシ'},
+      {id:'t2c-22',text:'「カフェ予定日」「土地」「土地エリア」を入力する',tool:'スプシ'},
+      {id:'t2c-23',text:'紹介来場の場合、【紹介報告チャット】にて「来場者」と「紹介者」の報告を行う',tool:'チャット'},
+      {id:'t2c-24',text:'紹介カード報告を【♪紹介カードCP/紹介依頼数管理】チャットにて行う',tool:'チャット'},
+      {id:'t2c-25',text:'モデルハウスの足りない備品（飲み物・掃除用具）を確認し、美香さんに発注依頼を行う',tool:'チャット'},
+      {id:'t2c-26',text:'「間取り図10枚」「青ペン3本」「スケッチブック3冊」「カタログ10冊」の確認・不備は山本さんに報告',tool:'チャット'},
+    ],
+  },
+  3:{
+    '3a':[
+      {id:'t3a-1',text:'次アポ表の実質来場欄に○入力した',tool:'スプシ'},
+      {id:'t3a-2',text:'次アポ表にLP以降のアポ日を入力した',tool:'スプシ'},
+      {id:'t3a-3',text:'お客様にサンクスメール送信した',tool:'LINE'},
+      {id:'t3a-4',text:'ZOHOのメモ欄に「面談メモ」を張り付けた',tool:'ZOHO'},
+      {id:'t3a-5',text:'ZOHOのメモ欄に「議事録」を張り付けた',tool:'ZOHO'},
+      {id:'t3a-6',text:'ZOHOの「未完了の活動」から次回の日程を登録した',tool:'ZOHO'},
+      {id:'t3a-7',text:'ZOHOの「営業担当者」が自分の名前になっているか確認した',tool:'ZOHO'},
+      {id:'t3a-8',text:'ZOHOの「実施日）第二面談」を入力した',tool:'ZOHO'},
+      {id:'t3a-9',text:'ラクモにて登録した予定を修正入力した（設備紐づけ（会議室）/"㋐既存顧客打合せ"に変更）',tool:'ラクモ'},
+      {id:'t3a-10',text:'修正したラクモの担当者に鈴木さんを追加した',tool:'ラクモ'},
+      {id:'t3a-11',text:'FP(鈴木さん)に次回の日程を送った',tool:'チャット'},
+      {id:'t3a-12',text:'BOXの顧客フォルダにフォルダを新規作成した',tool:'BOX'},
+      {id:'t3a-13',text:'無料相談申込書をBOXの顧客フォルダの「契約」に格納した',tool:'BOX'},
+      {id:'t3a-14',text:'「次回までの事前準備タスク」と「商談中に発生したタスク」をドキュメントに書き出しAsanaにタスク化',tool:'ASANA'},
+      {id:'t3a-15',text:'FP(鈴木さん)が都合が合わなかった場合、お客様にリスケ依頼した',tool:'LINE'},
+      {id:'t3a-16',text:'商談の1週間前にリマインドのLINEを送信した',tool:'LINE'},
+      {id:'t3a-17',text:'お客様からLINEにてヒアリングシートの写メを送ってもらった',tool:'LINE'},
+      {id:'t3a-18',text:'ヒアリングシートを1枚のPDFに編集した',tool:'PDF'},
+      {id:'t3a-19',text:'FP(鈴木さん)にヒアリングシートを送付した',tool:'チャット'},
+      {id:'t3a-20',text:'FP(鈴木さん)にLPで「お客様と合意を作りたい金額」を事前に指示する',tool:'チャット'},
+    ],
+    '3b':[
+      {id:'t3b-1',text:'次アポ表の実質来場欄に○入力した',tool:'スプシ'},
+      {id:'t3b-2',text:'お客様にサンクスメール送信した',tool:'LINE'},
+      {id:'t3b-3',text:'ZOHOのメモ欄に「面談メモ」を張り付けた',tool:'ZOHO'},
+      {id:'t3b-4',text:'ZOHOのメモ欄に「議事録」を張り付けた',tool:'ZOHO'},
+      {id:'t3b-5',text:'ZOHOの「営業担当者」が自分の名前になっているか確認した',tool:'ZOHO'},
+      {id:'t3b-6',text:'ZOHOの「実施日）第二面談」を入力した',tool:'ZOHO'},
+    ],
+  },
+  4:{default:[
+    {id:'t4-1',text:'次アポ表の実質来場欄に○入力した',tool:'スプシ'},
+    {id:'t4-2',text:'次アポ表にヒアリングブック以降のアポ日を入力した',tool:'スプシ'},
+    {id:'t4-3',text:'お客様にサンクスメール送信した',tool:'LINE'},
+    {id:'t4-4',text:'ZOHOのメモ欄に「面談メモ」を張り付けた',tool:'ZOHO'},
+    {id:'t4-5',text:'ZOHOのメモ欄に「議事録」を張り付けた',tool:'ZOHO'},
+    {id:'t4-6',text:'ZOHOの「未完了の活動」から次回の日程を登録した',tool:'ZOHO'},
+    {id:'t4-7',text:'ラクモにて登録した予定を修正入力した（設備紐づけ/"㋐既存顧客打合せ"に変更）',tool:'ラクモ'},
+    {id:'t4-8',text:'ファイナンシャルプランナーからもらったデータを顧客フォルダに格納する',tool:'BOX'},
+    {id:'t4-9',text:'ヒアリングシートのスキャンデータを顧客フォルダに格納する',tool:'BOX'},
+    {id:'t4-10',text:'商談の1週間前にリマインドのLINEを送信した',tool:'LINE'},
+  ]},
+  5:{default:[
+    {id:'t5-1',text:'次アポ表の実質来場欄に○入力した',tool:'スプシ'},
+    {id:'t5-2',text:'次アポ表に資金計画以降のアポ日を入力した',tool:'スプシ'},
+    {id:'t5-3',text:'お客様にサンクスメール送信した',tool:'LINE'},
+    {id:'t5-4',text:'ZOHOのメモ欄に「面談メモ」を張り付けた',tool:'ZOHO'},
+    {id:'t5-5',text:'ZOHOのメモ欄に「議事録」を張り付けた',tool:'ZOHO'},
+    {id:'t5-6',text:'ZOHOの「未完了の活動」から次回の日程を登録した',tool:'ZOHO'},
+    {id:'t5-7',text:'ラクモにて登録した予定を修正入力した（設備紐づけ/"㋐既存顧客打合せ"に変更）',tool:'ラクモ'},
+    {id:'t5-8',text:'ヒアリングブックのスキャンデータを顧客フォルダに格納する（設計）',tool:'BOX'},
+    {id:'t5-9',text:'商談の1週間前にリマインドのLINEを送信した',tool:'LINE'},
+  ]},
+  6:{
+    '6a':[
+      {id:'t6-1',text:'次アポ表の実質来場欄に○入力した',tool:'スプシ'},
+      {id:'t6-2',text:'お客様にサンクスメール送信した',tool:'LINE'},
+      {id:'t6-3',text:'ZOHOのメモ欄に「面談メモ」を張り付けた',tool:'ZOHO'},
+      {id:'t6-4',text:'ZOHOのメモ欄に「議事録」を張り付けた',tool:'ZOHO'},
+    ],
+  },
+  7:{default:[
+    {id:'t7-1',text:'ラインワークスの登録を完了した',tool:'LINEワークス'},
+    {id:'t7-2',text:'Googleフォトの登録を完了した',tool:''},
+    {id:'t7-3',text:'TSUNAGUについてお客様にご説明を完了した',tool:''},
+    {id:'t7-4',text:'【土地ヒア/事前済みのケース】土地ツアーのアポを取得した',tool:''},
+    {id:'t7-5',text:'【土地ヒア/事前未完のケース】土地ヒアリングを実施した',tool:''},
+    {id:'t7-6',text:'　└ 事前審査の宿題を出した（ゆうパック返送）',tool:''},
+    {id:'t7-7',text:'　└ ランドチェックシートを顧客フォルダに保存した',tool:'BOX'},
+    {id:'t7-8',text:'　└ 物件王国に土地探しを依頼した',tool:''},
+    {id:'t7-9',text:'パートナー申込書のコピーを業務管理課の机の上に置いておく',tool:''},
+    {id:'t7-10',text:'パートナー申込書のスキャンデータを顧客フォルダの「契約」に格納する',tool:'BOX'},
+    {id:'t7-11',text:'次アポ表の実質来場欄に○入力した',tool:'スプシ'},
+    {id:'t7-12',text:'お客様にサンクスメール送信した',tool:'LINE'},
+    {id:'t7-13',text:'ZOHOの「実施日）パートナー申込」を入力した',tool:'ZOHO'},
+    {id:'t7-14',text:'ZOHOのステージを「パートナー申込」に変更した',tool:'ZOHO'},
+    {id:'t7-15',text:'ZOHOのメモ欄に「面談メモ」を張り付けた',tool:'ZOHO'},
+    {id:'t7-16',text:'ZOHOのメモ欄に「議事録」を張り付けた',tool:'ZOHO'},
+    {id:'t7-17',text:'ZOHOの「未完了の活動」から次回の日程を登録した',tool:'ZOHO'},
+    {id:'t7-18',text:'ラクモにて登録した予定を修正入力した（設備紐づけ/"㋐既存顧客打合せ"に変更）',tool:'ラクモ'},
+    {id:'t7-19',text:'【P申込報告チャット】にて報告を行う',tool:'チャット'},
+    {id:'t7-20',text:'全体スケジュールに顧客名を入力する',tool:''},
+    {id:'t7-21',text:'ペアの新米ADVがホスピタリティの手紙を引き出しから取る',tool:''},
+    {id:'t7-22',text:'【アドバイザーチャット】手紙を引き出しから取ったらチャットで倉本さんに連絡する',tool:'チャット'},
+    {id:'t7-23',text:'P申込から1週間以内にホスピタリティの手紙を書く',tool:''},
+    {id:'t7-24',text:'P申込から1週間以内に書いた手紙を倉本さんに渡す',tool:''},
+    {id:'t7-25',text:'【LINEワークス運用チャット】ラインワークスの開設報告を行う',tool:'チャット'},
+    {id:'t7-26',text:'土地ツアーの集合場所を顧客に連絡が完了した',tool:''},
+  ]},
+  8:{default:[
+    {id:'t8-1',text:'資金計画書（MAX）を準備する　※借入金額を設定しておく',tool:''},
+    {id:'t8-2',text:'建築予定地（購入土地）のインフォシートを準備する',tool:''},
+    {id:'t8-3',text:'所有土地の場合は、その公図と登記簿を準備する',tool:''},
+    {id:'t8-4',text:'直近2年分の源泉徴収票の写しを準備する（単独でない場合を除いてご夫妻両方）',tool:''},
+    {id:'t8-5',text:'育休中の場合は、育休に入る前のフルの源泉徴収票を準備する',tool:''},
+    {id:'t8-6',text:'免許証の裏表の写しを準備する（単独でない場合を除いてご夫妻両方）',tool:''},
+    {id:'t8-7',text:'保険証の裏表の写しを準備する（単独でない場合を除いてご夫妻両方）',tool:''},
+    {id:'t8-8',text:'奥様の産休・育休の復帰タイミングを明確化しておく',tool:''},
+    {id:'t8-9',text:'銀行から事前審査の回答をもらう',tool:''},
+    {id:'t8-10',text:'事前審査回答書をBOX顧客フォルダ内（資金フォルダ）に格納する',tool:'BOX'},
+    {id:'t8-11',text:'お客様へ銀行の担当者から商品説明の連絡があることを伝える',tool:''},
+    {id:'t8-12',text:'銀行へお客様へのローン商品の説明依頼をする',tool:''},
+  ]},
+  9:{default:[
+    {id:'t9-1',text:'買付提出したことをお客様へ報告',tool:''},
+    {id:'t9-2',text:'買付提出したことを[運用]生産調整会議で報告',tool:''},
+    {id:'t9-3',text:'[社内]担当選定依頼・敷調依頼（設計/監督/アドバイザー/CX）で設計、IC、監督の選定依頼をする',tool:''},
+    {id:'t9-4',text:'設計NG日をお客様に聞く',tool:''},
+    {id:'t9-5',text:'③④の連絡が来たら[社内]設計スケジュール管理チャットで寺田宛に設計スケジュール作成依頼',tool:'チャット'},
+    {id:'t9-6',text:'設計スケジュール作成完了の連絡が来たら、お客様と日程fix',tool:''},
+    {id:'t9-7',text:'全てのスケジュールをCRMからラクモへ登録　⇒バナー登録も行う',tool:'ラクモ'},
+    {id:'t9-8',text:'全てのスケジュールを全スケに登録',tool:''},
+    {id:'t9-9',text:'確定した銀行名と担当者名と連絡先を全スケに記入',tool:''},
+    {id:'t9-10',text:'営業申し送りを作成',tool:''},
+    {id:'t9-11',text:'【社内】営業申し送りと契約の日時を担当設計・担当監督・CXの川原さん・花畑さん・CCで美香さん宛に送る',tool:''},
+    {id:'t9-12',text:'LIFEFUND(ARRCH)様×casa【design casa設計依頼用】チャットで設計依頼を送る',tool:'チャット'},
+    {id:'t9-13',text:'設計依頼書を顧客のBOX設計の中に格納する',tool:'BOX'},
+    {id:'t9-14',text:'該当する建築家チャットにて設計スケジュールを共有、現地案内スケジュールを送付',tool:'チャット'},
+    {id:'t9-15',text:'お気に入り画像・資金計画書・ヒアリングブック・敷地調査報告書を印刷',tool:''},
+    {id:'t9-16',text:'建築家の先生の現地案内時に⑮の資料を渡す',tool:''},
+    {id:'t9-17',text:'建築家①の前日には社内設計に⑮の資料を渡す',tool:''},
+    {id:'t9-18',text:'設計前打ち合わせを行う（資金の最終確認 ※1h程度）',tool:''},
+    {id:'t9-19',text:'建築家①打合せ実施',tool:''},
+    {id:'t9-20',text:'建築家①後、TOTOと外構屋さんとカーテン屋さんに送客',tool:''},
+    {id:'t9-21',text:'TOTOの予定日を全スケに記入する',tool:''},
+    {id:'t9-22',text:'TOTOの予約確定日をお客様に連絡する',tool:''},
+  ]},
+  10:{
+    '10a':{
+      pre:[
+        {id:'t10ap1',text:'請負契約書の作成が完了した',tool:''},
+        {id:'t10ap2',text:'監督に建物本体価格を確認した',tool:''},
+        {id:'t10ap3',text:'資金計画書を最新化した',tool:''},
+        {id:'t10ap4',text:'CXに書類作成完了報告を行った',tool:''},
+        {id:'t10ap5',text:'製本された請負契約書を受け取り、チェックリストに基づいて確認した',tool:''},
+        {id:'t10ap6',text:'お客様に当日の詳細（日時・場所・持ち物（印鑑/印紙代1万円））をラインワークスにて連絡した',tool:'LINEワークス'},
+      ],
+      day:[
+        {id:'t10ad1',text:'請負契約書の内容を説明した',tool:''},
+        {id:'t10ad2',text:'資金計画書の内容を説明した',tool:''},
+        {id:'t10ad3',text:'クーリングオフについての説明をした',tool:''},
+        {id:'t10ad4',text:'個人情報取り扱いについての説明をした',tool:''},
+        {id:'t10ad5',text:'各書類に署名捺印をいただいた',tool:''},
+        {id:'t10ad6',text:'コロナ合意書の説明をした',tool:''},
+        {id:'t10ad7',text:'　└ 署名捺印をいただいた',tool:''},
+        {id:'t10ad8',text:'ウクライナ紛争合意書の説明をした',tool:''},
+        {id:'t10ad9',text:'　└ 署名捺印をいただいた',tool:''},
+        {id:'t10ad10',text:'瑕疵担保保険の動画を流した',tool:''},
+        {id:'t10ad11',text:'　└ 署名捺印をいただいた',tool:''},
+        {id:'t10ad12',text:'完成見学会・インスタライブ承諾書の説明をした',tool:''},
+        {id:'t10ad13',text:'　└ 署名捺印をいただいた',tool:''},
+        {id:'t10ad14',text:'契約アンケートを回答いただいた',tool:''},
+        {id:'t10ad15',text:'コロナ合意書の書類をコピーして原本をお客様にお渡しした',tool:''},
+      ],
+      post:[
+        {id:'t10aa1',text:'全体スケジュールの更新をした',tool:''},
+        {id:'t10aa2',text:'請負契約書・コロナ合意書コピー・ウクライナ紛争合意書・瑕疵担保・完成見学会承諾書をCXに渡した',tool:''},
+        {id:'t10aa3',text:'1万円を美香さんに渡した',tool:''},
+      ],
+    },
+    '10b':{
+      pre:[
+        {id:'t10bp1',text:'監督に建物本体価格を確認した',tool:''},
+        {id:'t10bp2',text:'資金計画書を最新化した',tool:''},
+        {id:'t10bp3',text:'変更合意書の作成が完了した',tool:''},
+        {id:'t10bp4',text:'代金清算書の作成が完了した',tool:''},
+      ],
+      day:[
+        {id:'t10bd1',text:'先行契約時の資金計画書と最新の資金計画書の内容を比較して変更点を説明した',tool:''},
+        {id:'t10bd2',text:'代金清算書を説明した',tool:''},
+        {id:'t10bd3',text:'　└ 追加変更の金額と内容を説明した',tool:''},
+        {id:'t10bd4',text:'工事請負契約変更合意書の内容を説明した',tool:''},
+        {id:'t10bd5',text:'　└ 変更点（工期/金額）の説明をした',tool:''},
+      ],
+      post:[
+        {id:'t10ba1',text:'全体スケジュールの更新をした',tool:''},
+        {id:'t10ba2',text:'変更合意書をCXに渡した',tool:''},
+      ],
+    },
+  },
+};
+
+// =====================================================
+// STATE
+// =====================================================
+var STORE_KEY = 'arrch_v3';
+var state = {
+  customers: [],
+  checks: {},
+  notes: {},
+  openAdvisors: {},
+  selectedCustomer: null,
+  activePhase: 1,
+  activeVariant: {},
+  activeSection: {},
+  treeFilter: '',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbyhc32a0jwwQu2M8AUg5XPBgiWAoQjD4bydgkLYMzSqJB7XkEHwxTp14BN_eHfs3gUO/exec',
+  lastSynced: 0,
+};
+
+function loadState() {
+  try {
+    var s = localStorage.getItem(STORE_KEY);
+    if (s) Object.assign(state, JSON.parse(s));
+    // migrate from old key
+    if (!state.customers.length) {
+      var old = localStorage.getItem('arrch_v2');
+      if (old) {
+        try {
+          var ov = JSON.parse(old);
+          if (ov.customers) state.customers = ov.customers;
+          if (ov.checks) state.checks = ov.checks;
+          if (ov.notes) state.notes = ov.notes;
+          if (ov.sheetUrl) state.sheetUrl = ov.sheetUrl;
+        } catch(e){}
+      }
+    }
+  } catch(e){}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      customers: state.customers,
+      checks: state.checks,
+      notes: state.notes,
+      openAdvisors: state.openAdvisors,
+      sheetUrl: state.sheetUrl,
+    }));
+  } catch(e){}
+}
+
+// =====================================================
+// UTILS
+// =====================================================
+function genId() {
+  return 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+}
+
+function getAdvisors() {
+  var map = {};
+  state.customers.forEach(function(c) {
+    var adv = (c.advisor || '未担当').trim();
+    if (!map[adv]) map[adv] = [];
+    map[adv].push(c);
+  });
+  return map;
+}
+
+function getTaskList(phaseId, variantId, sectionKey) {
+  var ph = TASKS[phaseId];
+  if (!ph) return [];
+  if (ph.default) return ph.default;
+  if (variantId) {
+    var v = ph[variantId];
+    if (!v) return [];
+    if (Array.isArray(v)) return v;
+    return v[sectionKey || 'pre'] || [];
+  }
+  return [];
+}
+
+function getChecksForCustomer(customerId, phaseId, variantId, sectionKey) {
+  var ch = state.checks[customerId] || {};
+  var tasks = getTaskList(phaseId, variantId, sectionKey);
+  var done = tasks.filter(function(t){ return ch[t.id]; }).length;
+  return {done: done, total: tasks.length};
+}
+
+function phaseHasSections(phaseId, variantId) {
+  if (phaseId !== 10 || !variantId) return false;
+  var v = TASKS[10][variantId];
+  return v && typeof v === 'object' && !Array.isArray(v);
+}
+
+// =====================================================
+// DASHBOARD
+// =====================================================
+var dashView = false;
+var dashFilter = 'all';
+var dashYear = 'all';
+var dashMonth = null;
+
+// フェーズごとの完了状況を返す
+// 戻り値: [{phaseId, name, done, total, pct, status:'complete'|'partial'|'none'}]
+function getPhaseBreakdown(c) {
+  var ch = state.checks[c.id] || {};
+  return PHASES.map(function(ph) {
+    var done = 0, total = 0;
+    var variants = VARIANTS[ph.id];
+    if (variants) {
+      variants.forEach(function(v) {
+        if (ph.id === 10) {
+          ['pre','day','post'].forEach(function(sec) {
+            var tasks = getTaskList(ph.id, v.id, sec);
+            total += tasks.length;
+            done += tasks.filter(function(t){ return ch[t.id]; }).length;
+          });
+        } else {
+          var tasks = getTaskList(ph.id, v.id, null);
+          total += tasks.length;
+          done += tasks.filter(function(t){ return ch[t.id]; }).length;
+        }
+      });
+    } else {
+      var tasks = getTaskList(ph.id, null, null);
+      total += tasks.length;
+      done += tasks.filter(function(t){ return ch[t.id]; }).length;
+    }
+    var pct = total > 0 ? Math.round(done / total * 100) : 0;
+    var status = done === 0 ? 'none' : done === total ? 'complete' : 'partial';
+    return { phaseId: ph.id, name: ph.name, done: done, total: total, pct: pct, status: status };
+  });
+}
+
+function getCustomerStats(c) {
+  var ch = state.checks[c.id] || {};
+  var totalDone = 0, totalAll = 0;
+  PHASES.forEach(function(ph) {
+    var variants = VARIANTS[ph.id];
+    if (variants) {
+      variants.forEach(function(v) {
+        if (ph.id === 10) {
+          ['pre','day','post'].forEach(function(sec) {
+            var tasks = getTaskList(ph.id, v.id, sec);
+            totalAll += tasks.length;
+            totalDone += tasks.filter(function(t){ return ch[t.id]; }).length;
+          });
+        } else {
+          var tasks = getTaskList(ph.id, v.id, null);
+          totalAll += tasks.length;
+          totalDone += tasks.filter(function(t){ return ch[t.id]; }).length;
+        }
+      });
+    } else {
+      var tasks = getTaskList(ph.id, null, null);
+      totalAll += tasks.length;
+      totalDone += tasks.filter(function(t){ return ch[t.id]; }).length;
+    }
+  });
+  var pct = totalAll > 0 ? Math.round(totalDone / totalAll * 100) : 0;
+  // current phase stats
+  var phaseId = c.phase || 1;
+  var variants2 = VARIANTS[phaseId];
+  var varId = variants2 ? variants2[0].id : null;
+  var phaseTasks = getTaskList(phaseId, varId, 'pre');
+  var phaseDone = phaseTasks.filter(function(t){ return ch[t.id]; }).length;
+  var phasePct = phaseTasks.length > 0 ? Math.round(phaseDone / phaseTasks.length * 100) : 0;
+  return { totalDone:totalDone, totalAll:totalAll, pct:pct, phaseDone:phaseDone, phaseTotal:phaseTasks.length, phasePct:phasePct };
+}
+
+function getDateParts(dateStr) {
+  if (!dateStr || dateStr === '—') return { year: null, month: null };
+  var parts = (dateStr + '').split('-');
+  if (parts.length >= 2) return { year: parts[0], month: parseInt(parts[1], 10) };
+  return { year: null, month: null };
+}
+
+function renderDashboard() {
+  var el = document.getElementById('dashboardScreen');
+  if (!el || el.style.display === 'none') return;
+
+  var customers = state.customers;
+  if (!customers.length) {
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text3)">顧客データがありません。シート同期を行ってください。</div>';
+    return;
+  }
+
+  // 年リスト収集
+  var yearSet = {};
+  customers.forEach(function(c) {
+    var dp = getDateParts(c.date);
+    var y = dp.year || 'none';
+    yearSet[y] = true;
+  });
+  var years = Object.keys(yearSet).filter(function(y){ return y !== 'none'; }).sort();
+  if (yearSet['none']) years.push('none');
+
+  // 年フィルター適用
+  var yearFiltered = customers.filter(function(c) {
+    if (dashYear === 'all') return true;
+    var dp = getDateParts(c.date);
+    var y = dp.year || 'none';
+    return y === dashYear;
+  });
+
+  // 月フィルター適用
+  var monthFiltered = yearFiltered.filter(function(c) {
+    if (!dashMonth) return true;
+    var dp = getDateParts(c.date);
+    return dp.month === dashMonth;
+  });
+
+  // ステータスフィルター適用
+  var filtered = monthFiltered.filter(function(c) {
+    if (dashFilter === 'warn') return getCustomerStats(c).pct === 0;
+    return true;
+  });
+
+  // サマリー集計（年+月フィルター後）
+  var totalDoneAll = 0, totalAllAll = 0, warnCount = 0;
+  var advMap = {}, phaseCount = {};
+  monthFiltered.forEach(function(c) {
+    var s = getCustomerStats(c);
+    totalDoneAll += s.totalDone; totalAllAll += s.totalAll;
+    if (s.pct === 0) warnCount++;
+    var adv = (c.advisor || '未担当').trim();
+    if (!advMap[adv]) advMap[adv] = { done:0, total:0, count:0 };
+    advMap[adv].done += s.totalDone; advMap[adv].total += s.totalAll; advMap[adv].count++;
+    phaseCount[c.phase||1] = (phaseCount[c.phase||1]||0) + 1;
+  });
+  var avgPct = totalAllAll > 0 ? Math.round(totalDoneAll / totalAllAll * 100) : 0;
+
+  // 月別集計（年選択時）
+  var monthStats = {};
+  if (dashYear !== 'all' && dashYear !== 'none') {
+    for (var m = 1; m <= 12; m++) {
+      var mc = yearFiltered.filter(function(c){ return getDateParts(c.date).month === m; });
+      if (mc.length) {
+        var md = 0, mt = 0;
+        mc.forEach(function(c){ var s = getCustomerStats(c); md += s.totalDone; mt += s.totalAll; });
+        monthStats[m] = { count: mc.length, done: md, total: mt, pct: mt > 0 ? Math.round(md/mt*100) : 0 };
+      }
+    }
+  }
+  var MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+  // ===== HTML構築 =====
+  var html = '<div class="dash-title">ダッシュボード</div>';
+
+  // 年タブ
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  var yearTabs = [{k:'all',l:'すべて'}];
+  years.forEach(function(y){ yearTabs.push({k:y, l: y==='none'?'日付なし':y+'年'}); });
+  yearTabs.forEach(function(t) {
+    var cnt = t.k==='all' ? customers.length : customers.filter(function(c){ var dp=getDateParts(c.date); return (dp.year||'none')===t.k; }).length;
+    html += '<button class="dash-filter-btn' + (dashYear===t.k?' active':'') + '" style="font-size:13px;padding:7px 16px;border-radius:8px" onclick="setDashYear(\'' + t.k + '\')">' + escHtml(t.l) + '<span style="margin-left:6px;opacity:.7;font-size:11px">(' + cnt + '名)</span></button>';
+  });
+  html += '</div>';
+
+  // 月カード（年選択時）
+  if (dashYear !== 'all' && dashYear !== 'none' && Object.keys(monthStats).length) {
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">';
+    for (var m2 = 1; m2 <= 12; m2++) {
+      if (!monthStats[m2]) continue;
+      var ms = monthStats[m2];
+      var isActive = dashMonth === m2;
+      html += '<div onclick="setDashMonth(' + m2 + ')" style="background:var(--bg2);border:2px solid ' + (isActive?'var(--gold)':'var(--border)') + ';border-radius:10px;padding:12px;cursor:pointer;transition:all .15s">';
+      html += '<div style="font-size:13px;font-weight:700;color:' + (isActive?'var(--gold)':'var(--text2)') + ';margin-bottom:6px">' + MONTH_NAMES[m2-1] + '</div>';
+      html += '<div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:6px">' + ms.count + '<span style="font-size:12px;margin-left:3px;color:var(--text3)">名</span></div>';
+      html += '<div style="background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px"><div style="width:' + ms.pct + '%;height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold));border-radius:4px"></div></div>';
+      html += '<div style="font-size:11px;color:var(--text3)">' + ms.pct + '% 完了</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+    if (dashMonth) {
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-top:-4px">';
+      html += '<span style="font-size:13px;color:var(--text2);font-weight:600">' + dashYear + '年 ' + MONTH_NAMES[dashMonth-1] + ' の顧客</span>';
+      html += '<button onclick="setDashMonth(null)" style="font-size:11px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);border-radius:4px;padding:3px 8px;cursor:pointer">✕ 月の絞込を解除</button>';
+      html += '</div>';
+    }
+  }
+
+  // サマリーカード
+  html += '<div class="dash-cards">';
+  html += '<div class="dash-card"><div class="dash-card-label">👥 顧客数</div><div class="dash-card-value">' + monthFiltered.length + '<span style="font-size:14px;margin-left:4px">名</span></div><div class="dash-card-sub">' + (dashYear==='all'?'全期間':dashYear==='none'?'日付なし':dashYear+'年'+(dashMonth?MONTH_NAMES[dashMonth-1]:'')) + '</div></div>';
+  html += '<div class="dash-card"><div class="dash-card-label">📈 平均完了率</div><div class="dash-card-value' + (avgPct>=50?' good':'') + '">' + avgPct + '<span style="font-size:14px;margin-left:2px">%</span></div><div class="dash-card-sub">全タスク平均</div></div>';
+  html += '<div class="dash-card warn"><div class="dash-card-label">⚠️ 要確認</div><div class="dash-card-value">' + warnCount + '<span style="font-size:14px;margin-left:4px">名</span></div><div class="dash-card-sub">タスク未着手</div></div>';
+  html += '<div class="dash-card"><div class="dash-card-label">✅ 完了済</div><div class="dash-card-value good">' + monthFiltered.filter(function(c){return getCustomerStats(c).pct===100;}).length + '<span style="font-size:14px;margin-left:4px">名</span></div><div class="dash-card-sub">全タスク完了</div></div>';
+  html += '</div>';
+
+  // グラフ
+  html += '<div class="dash-charts">';
+  html += '<div class="dash-chart-box"><div class="dash-chart-title">担当ADV別 完了率</div><div class="bar-chart">';
+  Object.keys(advMap).sort().forEach(function(adv) {
+    var s = advMap[adv];
+    var pct = s.total > 0 ? Math.round(s.done/s.total*100) : 0;
+    html += '<div class="bar-row"><div class="bar-label" title="' + escHtml(adv) + '">' + escHtml(adv) + '</div><div class="bar-track"><div class="bar-fill' + (pct<30?' warn':'') + '" style="width:' + pct + '%"></div></div><div class="bar-pct">' + pct + '%</div></div>';
+  });
+  if (!Object.keys(advMap).length) html += '<div style="color:var(--text3);font-size:12px;padding:10px">データなし</div>';
+  html += '</div></div>';
+
+  var maxPh = Math.max.apply(null, Object.values(phaseCount).concat([1]));
+  html += '<div class="dash-chart-box"><div class="dash-chart-title">フェーズ別 顧客数</div><div class="bar-chart">';
+  PHASES.forEach(function(ph) {
+    var cnt = phaseCount[ph.id]||0;
+    html += '<div class="phase-bar-row"><div class="phase-bar-label">' + escHtml(ph.name) + '</div><div class="phase-bar-track"><div class="phase-bar-fill" style="width:' + Math.round(cnt/maxPh*100) + '%"></div></div><div class="phase-bar-count">' + cnt + '名</div></div>';
+  });
+  html += '</div></div></div>';
+
+  // テーブル
+  html += '<div class="dash-table-box">';
+  html += '<div class="dash-filter-bar">';
+  [{k:'all',l:'すべて（'+monthFiltered.length+'）'},{k:'warn',l:'⚠️ 要確認（'+warnCount+'）'}].forEach(function(f){
+    html += '<button class="dash-filter-btn' + (dashFilter===f.k?' active':'') + '" onclick="setDashFilter(\'' + f.k + '\')">' + escHtml(f.l) + '</button>';
+  });
+  html += '</div>';
+  // フェーズ略称
+  var PHASE_SHORT = ['準備','初回','カフェ','LP','ヒア','資金','P申','審査','土地','契約'];
+  // ドット凡例
+  html += '<div style="padding:8px 16px 0;display:flex;gap:14px;font-size:11px;color:var(--text3)">';
+  html += '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2b9e5a;margin-right:4px;vertical-align:middle"></span>完了</span>';
+  html += '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--gold);margin-right:4px;vertical-align:middle"></span>進行中</span>';
+  html += '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--bg4);border:1px solid var(--border);margin-right:4px;vertical-align:middle"></span>未着手</span>';
+  html += '</div>';
+
+  html += '<div style="overflow-x:auto"><table class="dash-table">';
+  html += '<thead><tr><th>顧客名</th><th>担当ADV</th><th>初接触日</th><th>フェーズ別進捗</th><th></th></tr></thead><tbody>';
+
+  // 未着手フェーズが多い順（遅れている顧客が上）
+  var sorted = filtered.slice().sort(function(a,b) {
+    var ba = getPhaseBreakdown(a), bb = getPhaseBreakdown(b);
+    var noneA = ba.filter(function(p){return p.status==='none';}).length;
+    var noneB = bb.filter(function(p){return p.status==='none';}).length;
+    return noneB - noneA;
+  });
+
+  sorted.forEach(function(c) {
+    var breakdown = getPhaseBreakdown(c);
+    var completeCount = breakdown.filter(function(p){return p.status==='complete';}).length;
+    var partialCount = breakdown.filter(function(p){return p.status==='partial';}).length;
+    var allNone = completeCount === 0 && partialCount === 0;
+    var allDone = completeCount === PHASES.length;
+
+    // フェーズドット
+    var dotsHtml = '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">';
+    breakdown.forEach(function(p, i) {
+      var color = p.status==='complete' ? '#2b9e5a' : p.status==='partial' ? 'var(--gold)' : 'var(--bg4)';
+      var border = p.status==='none' ? '1px solid var(--border)' : 'none';
+      var textColor = p.status==='none' ? 'var(--text3)' : '#fff';
+      dotsHtml += '<div title="' + escHtml(p.name) + ': ' + p.done + '/' + p.total + '(' + p.pct + '%)" style="background:' + color + ';border:' + border + ';border-radius:4px;padding:2px 5px;font-size:10px;font-weight:600;color:' + textColor + ';white-space:nowrap;cursor:default">' + escHtml(PHASE_SHORT[i]) + '</div>';
+    });
+    dotsHtml += '</div>';
+
+    var rowStyle = allNone ? 'background:rgba(220,60,30,.04)' : '';
+    html += '<tr onclick="openFromDash(\'' + c.id + '\')" style="' + rowStyle + '">';
+    html += '<td><strong>' + escHtml(c.name) + '</strong>';
+    if (allNone) html += ' <span class="status-badge status-warn" style="font-size:9px">要確認</span>';
+    else if (allDone) html += ' <span class="status-badge status-ok" style="font-size:9px">完了</span>';
+    html += '</td>';
+    html += '<td>' + escHtml(c.advisor||'未担当') + '</td>';
+    html += '<td>' + escHtml(c.date||'—') + '</td>';
+    html += '<td>' + dotsHtml + '</td>';
+    html += '<td><button class="dash-detail-btn" onclick="event.stopPropagation();openFromDash(\'' + c.id + '\')">詳細 ›</button></td>';
+    html += '</tr>';
+  });
+  if (!sorted.length) html += '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text3)">該当する顧客はいません</td></tr>';
+  html += '</tbody></table></div></div>';
+
+  el.innerHTML = html;
+}
+
+window.setDashYear = function(y) {
+  dashYear = y;
+  dashMonth = null;
+  dashFilter = 'all';
+  renderDashboard();
+};
+window.setDashMonth = function(m) {
+  dashMonth = m;
+  dashFilter = 'all';
+  renderDashboard();
+};
+window.setDashFilter = function(f) {
+  dashFilter = f;
+  renderDashboard();
+};
+
+window.openFromDash = function(id) {
+  dashView = false;
+  document.getElementById('dashboardScreen').style.display = 'none';
+  document.getElementById('btnDash').classList.remove('active');
+  state.selectedCustomer = id;
+  var adv = (state.customers.find(function(c){return c.id===id;})||{}).advisor || '未担当';
+  state.openAdvisors[adv] = true;
+  renderTree();
+  renderDetail();
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('customerDetail').style.display = 'flex';
+};
+
+document.getElementById('btnDash').addEventListener('click', function() {
+  dashView = !dashView;
+  var btn = document.getElementById('btnDash');
+  var dash = document.getElementById('dashboardScreen');
+  var welcome = document.getElementById('welcomeScreen');
+  var detail = document.getElementById('customerDetail');
+  if (dashView) {
+    btn.classList.add('active');
+    dash.style.display = 'flex';
+    welcome.style.display = 'none';
+    detail.style.display = 'none';
+    renderDashboard();
+  } else {
+    btn.classList.remove('active');
+    dash.style.display = 'none';
+    if (state.selectedCustomer && state.customers.find(function(c){return c.id===state.selectedCustomer;})) {
+      detail.style.display = 'flex';
+    } else {
+      welcome.style.display = '';
+    }
+  }
+});
+
+// =====================================================
+// RENDER TREE
+// =====================================================
+function renderTree() {
+  var tree = document.getElementById('sidebarTree');
+  var q = (state.treeFilter || '').toLowerCase();
+  var advMap = getAdvisors();
+  var advNames = Object.keys(advMap).sort();
+
+  if (!advNames.length) {
+    tree.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:13px">顧客がいません<br><small>シート同期または手動追加してください</small></div>';
+    return;
+  }
+
+  var html = '';
+  advNames.forEach(function(adv) {
+    var customers = advMap[adv];
+    var filtered = q ? customers.filter(function(c){
+      return c.name.toLowerCase().indexOf(q) >= 0 || adv.toLowerCase().indexOf(q) >= 0;
+    }) : customers;
+    if (q && !filtered.length) return;
+
+    var isOpen = state.openAdvisors[adv] || (!!q && filtered.length > 0);
+    html += '<div class="adv-folder">';
+    html += '<div class="adv-header" onclick="toggleAdvisor(\'' + escAttr(adv) + '\')">';
+    html += '<span class="adv-icon">👤</span>';
+    html += '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(adv) + '</span>';
+    html += '<span class="adv-count">' + filtered.length + '</span>';
+    html += '<span class="adv-arrow' + (isOpen ? ' open' : '') + '">▶</span>';
+    html += '</div>';
+    html += '<div class="customer-list' + (isOpen ? ' open' : '') + '">';
+    filtered.forEach(function(c) {
+      var isActive = state.selectedCustomer === c.id;
+      html += '<div class="customer-item' + (isActive ? ' active' : '') + '" onclick="selectCustomer(\'' + c.id + '\')" title="' + escAttr(c.name) + '">' + escHtml(c.name) + '</div>';
+    });
+    html += '</div></div>';
+  });
+
+  tree.innerHTML = html || '<div style="padding:20px 16px;text-align:center;color:var(--text3);font-size:13px">検索結果なし</div>';
+}
+
+window.toggleAdvisor = function(adv) {
+  state.openAdvisors[adv] = !state.openAdvisors[adv];
+  saveState();
+  renderTree();
+};
+
+// =====================================================
+// CUSTOMER DETAIL
+// =====================================================
+window.selectCustomer = function(id) {
+  state.selectedCustomer = id;
+  state.activePhase = state.activePhase || 1;
+  if (window.innerWidth <= 767) closeSidebar();
+  renderTree();
+  renderDetail();
+};
+
+function renderDetail() {
+  var detail = document.getElementById('customerDetail');
+  var welcome = document.getElementById('welcomeScreen');
+  var c = state.customers.find(function(x){ return x.id === state.selectedCustomer; });
+  if (!c) {
+    welcome.style.display = '';
+    detail.style.display = 'none';
+    return;
+  }
+  welcome.style.display = 'none';
+  detail.style.display = 'flex';
+
+  var currentPhase = state.activePhase || 1;
+  var variants = VARIANTS[currentPhase];
+  var currentVariant = state.activeVariant[currentPhase] || (variants ? variants[0].id : null);
+  var sectionKey = currentPhase + '_' + currentVariant;
+  var currentSection = state.activeSection[sectionKey] || 'pre';
+
+  // HEADER
+  var html = '<div class="detail-header">';
+  html += '<div><div class="detail-name">' + escHtml(c.name) + '</div>';
+  html += '<div class="detail-meta">';
+  if (c.advisor) html += '<span>👤 ' + escHtml(c.advisor) + '</span>';
+  if (c.contact) html += '<span>🤝 ' + escHtml(c.contact) + '</span>';
+  if (c.date) html += '<span>📅 ' + escHtml(c.date) + '</span>';
+  if (c.fromSheet) html += '<span style="color:var(--gold-dark)">📊 シート</span>';
+  html += '</div></div>';
+  html += '<div class="header-actions">';
+  html += '<button class="btn-edit" onclick="openEditCustomer(\'' + c.id + '\')">編集</button>';
+  html += '<button class="btn-delete" onclick="deleteCustomer(\'' + c.id + '\')">削除</button>';
+  html += '</div></div>';
+
+  // PHASE TABS
+  html += '<div class="phase-tabs-wrap"><div class="phase-tabs">';
+  PHASES.forEach(function(ph) {
+    var isActive = currentPhase === ph.id;
+    var varIds = VARIANTS[ph.id] ? VARIANTS[ph.id].map(function(v){return v.id;}) : [null];
+    var totalDone = 0, totalAll = 0;
+    varIds.forEach(function(vid) {
+      if (phaseHasSections(ph.id, vid)) {
+        ['pre','day','post'].forEach(function(sec){
+          var r = getChecksForCustomer(c.id, ph.id, vid, sec);
+          totalDone += r.done; totalAll += r.total;
+        });
+      } else {
+        var r = getChecksForCustomer(c.id, ph.id, vid, null);
+        totalDone += r.done; totalAll += r.total;
+      }
+    });
+    var doneLabel = (totalAll > 0 && totalDone === totalAll) ? '<span class="tab-done">✓</span>' : '';
+    html += '<div class="phase-tab' + (isActive ? ' active' : '') + '" onclick="setPhase(' + ph.id + ')">' + escHtml(ph.name) + doneLabel + '</div>';
+  });
+  html += '</div></div>';
+
+  // VARIANT BAR
+  if (variants) {
+    html += '<div class="variant-bar">';
+    variants.forEach(function(v) {
+      html += '<button class="variant-btn' + (currentVariant === v.id ? ' active' : '') + '" onclick="setVariant(' + currentPhase + ',\'' + v.id + '\')">' + escHtml(v.label) + '</button>';
+    });
+    html += '</div>';
+  }
+
+  // SECTION BAR (phase 10)
+  if (phaseHasSections(currentPhase, currentVariant)) {
+    html += '<div class="section-bar">';
+    [{k:'pre',l:'事前準備'},{k:'day',l:'当日'},{k:'post',l:'契約後'}].forEach(function(s) {
+      html += '<button class="section-btn' + (currentSection === s.k ? ' active' : '') + '" onclick="setSection(\'' + sectionKey + '\',\'' + s.k + '\')">' + s.l + '</button>';
+    });
+    html += '</div>';
+  }
+
+  // TASKS
+  var tasks = getTaskList(currentPhase, currentVariant, currentSection);
+  var ch = state.checks[c.id] || {};
+  var ns = state.notes[c.id] || {};
+
+  html += '<div class="task-content">';
+
+  if (!tasks.length) {
+    html += '<div style="text-align:center;padding:40px;color:var(--text3)">このフェーズにはタスクがありません</div>';
+  } else {
+    var done = tasks.filter(function(t){ return ch[t.id]; }).length;
+    var pct = Math.round(done / tasks.length * 100);
+
+    html += '<div class="task-progress">';
+    html += '<div class="progress-label"><span>進捗</span><span id="progressText">' + done + ' / ' + tasks.length + ' 完了</span></div>';
+    html += '<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:' + pct + '%"></div></div>';
+    html += '</div>';
+
+    html += '<div style="margin-top:14px">';
+    html += '<div class="task-table-header"><span>✓</span><span>タスク</span><span>ツール</span><span>メモ</span></div>';
+    html += '<div class="task-list">';
+    tasks.forEach(function(t) {
+      var isDone = !!ch[t.id];
+      var hasNote = !!(ns[t.id] && ns[t.id].trim());
+      var toolClass = t.tool ? (TOOL_CLASS_MAP[t.tool] || '') : '';
+      html += '<div class="task-row' + (isDone ? ' done' : '') + '" id="row_' + t.id + '">';
+      html += '<div class="task-check"><input type="checkbox"' + (isDone ? ' checked' : '') + ' onchange="toggleCheck(\'' + c.id + '\',\'' + t.id + '\',this.checked,' + tasks.length + ')"></div>';
+      html += '<div class="task-text">' + escHtml(t.text) + '</div>';
+      html += '<div class="task-tool">' + (t.tool ? '<span class="tool-badge ' + toolClass + '">' + escHtml(t.tool) + '</span>' : '') + '</div>';
+      html += '<div class="task-note"><button class="note-btn' + (hasNote ? ' has-note' : '') + '" onclick="openNote(\'' + c.id + '\',\'' + t.id + '\',\'' + escAttr(t.text.substring(0,40)) + '\')">' + (hasNote ? '📝' : '✏️') + '</button></div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  if (c.memo) {
+    html += '<div style="margin-top:16px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px">';
+    html += '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">顧客メモ</div>';
+    html += '<div style="font-size:13px;color:var(--text2);white-space:pre-wrap">' + escHtml(c.memo) + '</div>';
+    html += '</div>';
+  }
+
+  html += '</div>'; // task-content
+
+  detail.innerHTML = html;
+}
+
+window.setPhase = function(id) {
+  state.activePhase = id;
+  renderDetail();
+};
+window.setVariant = function(phaseId, varId) {
+  state.activeVariant[phaseId] = varId;
+  renderDetail();
+};
+window.setSection = function(key, sec) {
+  state.activeSection[key] = sec;
+  renderDetail();
+};
+
+// =====================================================
+// CHECKS
+// =====================================================
+window.toggleCheck = function(customerId, taskId, checked, total) {
+  if (!state.checks[customerId]) state.checks[customerId] = {};
+  state.checks[customerId][taskId] = checked;
+  saveState();
+  // update row class
+  var row = document.getElementById('row_' + taskId);
+  if (row) row.className = 'task-row' + (checked ? ' done' : '');
+  // update progress
+  var ch = state.checks[customerId];
+  var currentPhase = state.activePhase;
+  var currentVariant = state.activeVariant[currentPhase] || null;
+  var currentSection = state.activeSection[currentPhase + '_' + currentVariant] || 'pre';
+  var tasks = getTaskList(currentPhase, currentVariant, currentSection);
+  var done = tasks.filter(function(t){ return ch[t.id]; }).length;
+  var fill = document.getElementById('progressFill');
+  var label = document.getElementById('progressText');
+  if (fill) fill.style.width = (tasks.length ? Math.round(done/tasks.length*100) : 0) + '%';
+  if (label) label.textContent = done + ' / ' + tasks.length + ' 完了';
+};
+
+// =====================================================
+// NOTE MODAL
+// =====================================================
+var currentNoteCustomer = null, currentNoteTask = null;
+
+window.openNote = function(customerId, taskId, taskText) {
+  currentNoteCustomer = customerId;
+  currentNoteTask = taskId;
+  document.getElementById('noteTaskText').textContent = taskText;
+  var ns = state.notes[customerId] || {};
+  document.getElementById('noteInput').value = ns[taskId] || '';
+  openModal('noteModal');
+};
+
+document.getElementById('saveNote').addEventListener('click', function() {
+  if (!currentNoteCustomer || !currentNoteTask) return;
+  if (!state.notes[currentNoteCustomer]) state.notes[currentNoteCustomer] = {};
+  state.notes[currentNoteCustomer][currentNoteTask] = document.getElementById('noteInput').value;
+  saveState();
+  closeModal('noteModal');
+  renderDetail();
+});
+document.getElementById('cancelNote').addEventListener('click', function(){ closeModal('noteModal'); });
+
+// =====================================================
+// CUSTOMER MODAL
+// =====================================================
+var editingCustomerId = null;
+
+function buildPhaseSelect(selectedId) {
+  var sel = document.getElementById('fPhase');
+  sel.innerHTML = PHASES.map(function(ph){
+    return '<option value="' + ph.id + '"' + (ph.id === selectedId ? ' selected' : '') + '>' + ph.name + '</option>';
+  }).join('');
+}
+
+document.getElementById('btnAddCustomer').addEventListener('click', function() {
+  editingCustomerId = null;
+  document.getElementById('customerModalTitle').textContent = '顧客を追加';
+  document.getElementById('fName').value = '';
+  document.getElementById('fAdvisor').value = '';
+  document.getElementById('fContact').value = '';
+  document.getElementById('fDate').value = '';
+  document.getElementById('fMemo').value = '';
+  buildPhaseSelect(1);
+  openModal('customerModal');
+});
+
+window.openEditCustomer = function(id) {
+  var c = state.customers.find(function(x){ return x.id === id; });
+  if (!c) return;
+  editingCustomerId = id;
+  document.getElementById('customerModalTitle').textContent = '顧客を編集';
+  document.getElementById('fName').value = c.name || '';
+  document.getElementById('fAdvisor').value = c.advisor || '';
+  document.getElementById('fContact').value = c.contact || '';
+  document.getElementById('fDate').value = c.date || '';
+  document.getElementById('fMemo').value = c.memo || '';
+  buildPhaseSelect(c.phase || 1);
+  openModal('customerModal');
+};
+
+document.getElementById('saveCustomer').addEventListener('click', function() {
+  var name = document.getElementById('fName').value.trim();
+  var advisor = document.getElementById('fAdvisor').value.trim();
+  if (!name) { alert('顧客名は必須です'); return; }
+  if (editingCustomerId) {
+    var c = state.customers.find(function(x){ return x.id === editingCustomerId; });
+    if (c) {
+      c.name = name; c.advisor = advisor;
+      c.contact = document.getElementById('fContact').value.trim();
+      c.date = document.getElementById('fDate').value;
+      c.memo = document.getElementById('fMemo').value.trim();
+      c.phase = parseInt(document.getElementById('fPhase').value) || 1;
+    }
+  } else {
+    state.customers.push({
+      id: genId(), name: name, advisor: advisor,
+      contact: document.getElementById('fContact').value.trim(),
+      date: document.getElementById('fDate').value,
+      memo: document.getElementById('fMemo').value.trim(),
+      phase: parseInt(document.getElementById('fPhase').value) || 1,
+      fromSheet: false,
+    });
+  }
+  saveState();
+  closeModal('customerModal');
+  renderTree();
+  if (state.selectedCustomer) renderDetail();
+});
+document.getElementById('cancelCustomer').addEventListener('click', function(){ closeModal('customerModal'); });
+
+window.deleteCustomer = function(id) {
+  if (!confirm('この顧客を削除しますか？')) return;
+  state.customers = state.customers.filter(function(c){ return c.id !== id; });
+  if (state.selectedCustomer === id) {
+    state.selectedCustomer = null;
+    document.getElementById('customerDetail').style.display = 'none';
+    document.getElementById('welcomeScreen').style.display = '';
+  }
+  saveState();
+  renderTree();
+};
+
+// =====================================================
+// SHEET SYNC
+// =====================================================
+document.getElementById('btnSync').addEventListener('click', function() {
+  if (state.sheetUrl) {
+    doSync();
+  } else {
+    document.getElementById('fSheetUrl').value = '';
+    openModal('sheetModal');
+  }
+});
+
+document.getElementById('confirmSheet').addEventListener('click', function() {
+  var url = document.getElementById('fSheetUrl').value.trim();
+  if (!url || !url.startsWith('http')) { alert('有効なURLを入力してください'); return; }
+  state.sheetUrl = url;
+  saveState();
+  closeModal('sheetModal');
+  doSync();
+});
+document.getElementById('cancelSheet').addEventListener('click', function(){ closeModal('sheetModal'); });
+
+function doSync(background, retryCount) {
+  retryCount = retryCount || 0;
+  var btn = document.getElementById('btnSync');
+  var status = document.getElementById('syncStatus');
+
+  if (!background) {
+    btn.disabled = true;
+    btn.textContent = '同期中…';
+    status.textContent = '同期中…';
+  }
+
+  var callbackName = 'gasCallback_' + Date.now();
+  var script = document.createElement('script');
+  var done = false;
+
+  var timer = setTimeout(function() {
+    if (done) return;
+    done = true;
+    delete window[callbackName];
+    if (script.parentNode) script.parentNode.removeChild(script);
+    if (!background) {
+      if (retryCount < 2) {
+        status.textContent = '再接続中…';
+        setTimeout(function(){ doSync(false, retryCount + 1); }, 2000);
+      } else {
+        status.textContent = '⚠️ 同期できませんでした';
+        btn.disabled = false;
+        btn.textContent = '📊 シート同期';
+      }
+    }
+  }, 30000);
+
+  window[callbackName] = function(data) {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    if (script.parentNode) script.parentNode.removeChild(script);
+    delete window[callbackName];
+    if (data.error) {
+      if (!background) {
+        status.textContent = '⚠️ エラー';
+        btn.disabled = false;
+        btn.textContent = '📊 シート同期';
+      }
+      return;
+    }
+    mergeSheetData(data);
+    state.lastSynced = Date.now();
+    saveState();
+    renderTree();
+    if (state.selectedCustomer) renderDetail();
+    if (dashView) renderDashboard();
+    var now = new Date();
+    var h = now.getHours(), m = ('0' + now.getMinutes()).slice(-2);
+    status.textContent = '✓ ' + h + ':' + m + ' 同期済';
+    if (!background) {
+      btn.disabled = false;
+      btn.textContent = '📊 シート同期';
+    }
+  };
+
+  script.onerror = function() {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    delete window[callbackName];
+    if (!background) {
+      if (retryCount < 2) {
+        status.textContent = '再接続中…';
+        setTimeout(function(){ doSync(false, retryCount + 1); }, 2000);
+      } else {
+        status.textContent = '⚠️ 同期できませんでした';
+        btn.disabled = false;
+        btn.textContent = '📊 シート同期';
+      }
+    }
+  };
+
+  script.src = state.sheetUrl + '?callback=' + callbackName + '&_t=' + Date.now();
+  document.head.appendChild(script);
+}
+
+function mergeSheetData(data) {
+  var rows = data.rows || [];
+  var added = 0;
+  rows.forEach(function(row) {
+    var name = ((row[1] || '') + '').trim();
+    var advisor = ((row[3] || '') + '').trim();
+    if (!name) return;
+    var sid = 'sheet_' + (advisor + '_' + name).replace(/[^\w\u3000-\u9fff]/g, '_');
+    var exists = state.customers.find(function(c){ return c.id === sid; });
+    if (exists) {
+      if (row[0]) exists.date = (row[0] + '').trim();
+      if (row[2]) exists.contact = (row[2] + '').trim();
+      if (advisor) exists.advisor = advisor;
+      return;
+    }
+    state.customers.push({
+      id: sid,
+      name: name,
+      advisor: advisor,
+      contact: ((row[2] || '') + '').trim(),
+      date: ((row[0] || '') + '').trim(),
+      memo: '',
+      phase: 1,
+      fromSheet: true,
+    });
+    added++;
+  });
+  return added;
+}
+
+// =====================================================
+// MODAL UTILS
+// =====================================================
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(function(el) {
+  el.addEventListener('click', function(e){ if (e.target === el) closeModal(el.id); });
+});
+
+// =====================================================
+// SIDEBAR MOBILE
+// =====================================================
+document.getElementById('hamburger').addEventListener('click', function(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+});
+document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// =====================================================
+// SEARCH
+// =====================================================
+document.getElementById('treeSearch').addEventListener('input', function() {
+  state.treeFilter = this.value;
+  renderTree();
+});
+
+// =====================================================
+// ESCAPE
+// =====================================================
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+// =====================================================
+// INIT
+// =====================================================
+loadState();
+// URLが保存されていない場合はデフォルトURLをセット
+if (!state.sheetUrl) {
+  state.sheetUrl = 'https://script.google.com/macros/s/AKfycbyhc32a0jwwQu2M8AUg5XPBgiWAoQjD4bydgkLYMzSqJB7XkEHwxTp14BN_eHfs3gUO/exec';
+}
+// 起動は即座に表示
+renderTree();
+if (state.selectedCustomer && state.customers.find(function(c){ return c.id === state.selectedCustomer; })) {
+  renderDetail();
+}
+// 最終同期時刻を表示しつつ、バックグラウンドで自動同期
+if (state.lastSynced) {
+  var d = new Date(state.lastSynced);
+  var h = d.getHours(), m = ('0' + d.getMinutes()).slice(-2);
+  document.getElementById('syncStatus').textContent = '最終同期 ' + h + ':' + m;
+}
+// 画面表示後に裏で同期（UIをブロックしない）
+setTimeout(function(){ doSync(true); }, 100);
+</script>
+</body>
+</html>
