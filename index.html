@@ -1589,7 +1589,11 @@ document.getElementById('btnAddCustomer').addEventListener('click', function() {
   document.getElementById('fName').value = '';
   document.getElementById('fAdvisor').value = '';
   document.getElementById('fContact').value = '';
-  document.getElementById('fDate').value = '';
+  var today = new Date();
+  var yyyy = today.getFullYear();
+  var mm = ('0' + (today.getMonth() + 1)).slice(-2);
+  var dd = ('0' + today.getDate()).slice(-2);
+  document.getElementById('fDate').value = yyyy + '-' + mm + '-' + dd;
   document.getElementById('fMemo').value = '';
   buildPhaseSelect(1);
   openModal('customerModal');
