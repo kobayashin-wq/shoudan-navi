@@ -1636,6 +1636,7 @@ document.getElementById('saveCustomer').addEventListener('click', function() {
   closeModal('customerModal');
   renderTree();
   if (state.selectedCustomer) renderDetail();
+  if (dashView) renderDashboard();
 });
 document.getElementById('cancelCustomer').addEventListener('click', function(){ closeModal('customerModal'); });
 
@@ -1649,6 +1650,7 @@ window.deleteCustomer = function(id) {
   }
   saveState();
   renderTree();
+  if (dashView) renderDashboard();
 };
 
 // =====================================================
