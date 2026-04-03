@@ -942,6 +942,7 @@ var dashView = false;
 var dashFilter = 'all';
 var dashYear = 'all';
 var dashMonth = null;
+var dashSort = 'warn';
 
 // フェーズごとの完了状況を返す
 // 戻り値: [{phaseId, name, done, total, pct, status:'complete'|'partial'|'none'}]
@@ -1152,10 +1153,19 @@ function renderDashboard() {
 
   // テーブル
   html += '<div class="dash-table-box">';
-  html += '<div class="dash-filter-bar">';
+  html += '<div class="dash-filter-bar" style="justify-content:space-between;align-items:center">';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
   [{k:'all',l:'すべて（'+monthFiltered.length+'）'},{k:'warn',l:'⚠️ 要確認（'+warnCount+'）'}].forEach(function(f){
     html += '<button class="dash-filter-btn' + (dashFilter===f.k?' active':'') + '" onclick="setDashFilter(\'' + f.k + '\')">' + escHtml(f.l) + '</button>';
   });
+  html += '</div>';
+  html += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">';
+  html += '<span style="font-size:11px;color:var(--text3)">並び替え：</span>';
+  var sortOpts = [{k:'warn',l:'遅れ順'},{k:'done',l:'完了順'},{k:'date',l:'日付順'},{k:'name',l:'名前順'}];
+  sortOpts.forEach(function(s){
+    html += '<button class="dash-filter-btn' + (dashSort===s.k?' active':'') + '" onclick="setDashSort(\'' + s.k + '\')">' + s.l + '</button>';
+  });
+  html += '</div>';
   html += '</div>';
   // フェーズ略称
   var PHASE_SHORT = ['準備','初回','カフェ','LP','ヒア','資金','P申','審査','土地','契約'];
@@ -1169,12 +1179,27 @@ function renderDashboard() {
   html += '<div style="overflow-x:auto"><table class="dash-table">';
   html += '<thead><tr><th>顧客名</th><th>担当ADV</th><th>初接触日</th><th>フェーズ別進捗</th><th></th></tr></thead><tbody>';
 
-  // 未着手フェーズが多い順（遅れている顧客が上）
   var sorted = filtered.slice().sort(function(a,b) {
-    var ba = getPhaseBreakdown(a), bb = getPhaseBreakdown(b);
-    var noneA = ba.filter(function(p){return p.status==='none';}).length;
-    var noneB = bb.filter(function(p){return p.status==='none';}).length;
-    return noneB - noneA;
+    if (dashSort === 'done') {
+      // 完了フェーズ多い順
+      var ba = getPhaseBreakdown(a), bb = getPhaseBreakdown(b);
+      var doneA = ba.filter(function(p){return p.status==='complete';}).length;
+      var doneB = bb.filter(function(p){return p.status==='complete';}).length;
+      return doneB - doneA;
+    } else if (dashSort === 'date') {
+      // 日付新しい順
+      var da = a.date || '', db = b.date || '';
+      return db.localeCompare(da);
+    } else if (dashSort === 'name') {
+      // 顧客名順
+      return (a.name||'').localeCompare(b.name||'', 'ja');
+    } else {
+      // 遅れ順（未着手多い順、デフォルト）
+      var ba2 = getPhaseBreakdown(a), bb2 = getPhaseBreakdown(b);
+      var noneA = ba2.filter(function(p){return p.status==='none';}).length;
+      var noneB = bb2.filter(function(p){return p.status==='none';}).length;
+      return noneB - noneA;
+    }
   });
 
   sorted.forEach(function(c) {
@@ -1225,6 +1250,10 @@ window.setDashMonth = function(m) {
 };
 window.setDashFilter = function(f) {
   dashFilter = f;
+  renderDashboard();
+};
+window.setDashSort = function(s) {
+  dashSort = s;
   renderDashboard();
 };
 
