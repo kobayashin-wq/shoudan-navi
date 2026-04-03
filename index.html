@@ -1160,7 +1160,7 @@ function renderDashboard() {
   html += '</div>';
   html += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">';
   html += '<span style="font-size:11px;color:var(--text3)">並び替え：</span>';
-  var sortOpts = [{k:'warn',l:'遅れ順'},{k:'done',l:'完了順'},{k:'date',l:'日付順'},{k:'name',l:'名前順'}];
+  var sortOpts = [{k:'warn',l:'遅れ順'},{k:'done',l:'完了順'},{k:'date',l:'日付順'},{k:'name',l:'名前順'},{k:'adv',l:'担当順'}];
   sortOpts.forEach(function(s){
     html += '<button class="dash-filter-btn' + (dashSort===s.k?' active':'') + '" onclick="setDashSort(\'' + s.k + '\')">' + s.l + '</button>';
   });
@@ -1191,6 +1191,11 @@ function renderDashboard() {
       return db.localeCompare(da);
     } else if (dashSort === 'name') {
       // 顧客名順
+      return (a.name||'').localeCompare(b.name||'', 'ja');
+    } else if (dashSort === 'adv') {
+      // 担当ADV順（五十音）、同じ担当内は名前順
+      var advCmp = (a.advisor||'未担当').localeCompare(b.advisor||'未担当', 'ja');
+      if (advCmp !== 0) return advCmp;
       return (a.name||'').localeCompare(b.name||'', 'ja');
     } else {
       // 遅れ順（未着手多い順、デフォルト）
